@@ -38,7 +38,7 @@ exports.signup = async (req, res) => {
         // Generate JWT token
         const token = jwt.sign(
             { id: newUser._id }, 
-            process.env.JWT_SECRET, 
+            'sruthi', 
             { expiresIn: '7d' }
         );
 
@@ -83,7 +83,7 @@ exports.login = async (req, res) => {
         // Generate JWT token
         const token = jwt.sign(
             { id: user._id }, 
-            process.env.JWT_SECRET, 
+            'sruthi', 
             { expiresIn: '7d' }
         );
 

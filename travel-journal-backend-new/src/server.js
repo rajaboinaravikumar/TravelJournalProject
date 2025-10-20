@@ -1,7 +1,7 @@
 // src/server.js
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet");
+
 const fs = require("fs");
 const path = require("path");
 const connectDB = require("./config/db");
@@ -21,7 +21,6 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Middleware
 app.use(cors());
-app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

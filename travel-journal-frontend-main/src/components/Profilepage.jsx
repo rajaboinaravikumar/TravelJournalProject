@@ -218,11 +218,9 @@ const Profilepage = () => {
           <div className="nav-item active">
             <FaUserCircle className="nav-icon" />
             <span>Profile</span>
+            
           </div>
-          <div className="nav-item" onClick={() => navigate("/notifications")}>
-            <FaBell className="nav-icon" />
-            <span>Notifications</span>
-          </div>
+         
         </nav>
         
         <button className="logout-btn" onClick={handleLogout}>
@@ -442,21 +440,9 @@ const Profilepage = () => {
         </div>
       </div>
 
-      {saveSuccess && (
-        <Notification
-          message="Profile updated successfully!"
-          type="success"
-          onClose={() => setSaveSuccess(false)}
-        />
-      )}
+     
 
-      {notif && (
-        <Notification
-          message={notif.message}
-          type={notif.type}
-          onClose={() => setNotif(null)}
-        />
-      )}
+     
     </div>
   );
 };

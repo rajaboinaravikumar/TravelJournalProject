@@ -1,14 +1,14 @@
-// src/controllers/journalController.js
 const Journal = require("../models/Journal");
 const User = require("../models/User");
 const path = require("path");
 const fs = require("fs");
+const { default: mongoose } = require("mongoose");
 
-console.log('Backend server started and logging is working!');
+console.log("✅ Backend server started and logging is working!");
 
 exports.createJournal = async (req, res) => {
   try {
-    const { location, tags, friendsMentioned, entry } = req.body;
+    const { title, location, tags, friendsMentioned, entry } = req.body;
 
     // Process uploaded images and sanitize paths
     const images = req.files
@@ -16,6 +16,7 @@ exports.createJournal = async (req, res) => {
       : [];
 
     const newJournal = new Journal({
+      title,
       user: req.user.id,
       location,
       images,
@@ -31,7 +32,6 @@ exports.createJournal = async (req, res) => {
       (imgPath) => `http://localhost:5000/${imgPath}`
     );
 
-    // Respond with full journal data and image URLs
     res.status(201).json({
       ...newJournal._doc,
       imageUrls,
@@ -46,16 +46,11 @@ exports.createJournal = async (req, res) => {
 
 exports.getUserJournals = async (req, res) => {
   try {
-    const journals = await Journal.find({
-      user: req.user.id,
-    })
-    .populate('user', 'firstName email profileImage profilePhoto')
-    .sort({
-      createdAt: -1,
-    });
+    const journals = await Journal.find({ user: req.user.id })
+      .populate("user", "firstName email profileImage profilePhoto")
+      .sort({ createdAt: -1 });
 
-    // Transform the data to include the full user object
-    const transformedJournals = journals.map(journal => ({
+    const transformedJournals = journals.map((journal) => ({
       _id: journal._id,
       title: journal.title || `Journey to ${journal.location}`,
       location: journal.location,
@@ -65,16 +60,18 @@ exports.getUserJournals = async (req, res) => {
       friendsMentioned: journal.friendsMentioned,
       createdAt: journal.createdAt,
       updatedAt: journal.updatedAt,
-      user: journal.user ? {
-        _id: journal.user._id,
-        firstName: journal.user.firstName,
-        email: journal.user.email,
-        profileImage: journal.user.profileImage,
-        profilePhoto: journal.user.profilePhoto
-      } : null,
+      user: journal.user
+        ? {
+            _id: journal.user._id,
+            firstName: journal.user.firstName,
+            email: journal.user.email,
+            profileImage: journal.user.profileImage,
+            profilePhoto: journal.user.profilePhoto,
+          }
+        : null,
       likes: Array.isArray(journal.likes) ? journal.likes.length : 0,
       comments: Array.isArray(journal.comments) ? journal.comments.length : 0,
-      rating: journal.rating || 4.5
+      rating: journal.rating || 4.5,
     }));
 
     res.json(transformedJournals);
@@ -87,28 +84,31 @@ exports.getUserJournals = async (req, res) => {
 };
 
 exports.getJournalById = async (req, res) => {
+  const { id } = req.params;
+
+  console.log("📥 Received request for Journal ID:", id);
+
+  if (!mongoose .Types.ObjectId.isValid(id)) {
+    console.error("❌ Invalid Journal ID:", id);
+    return res.status(400).json({ error: "Invalid journal ID" });
+  }
+
   try {
-    const journal = await Journal.findById(req.params.id)
-      .populate('user', 'firstName email profileImage profilePhoto')
-      .populate('comments.user', 'firstName email profileImage profilePhoto');
+    const journal = await Journal.findById(id)
+      .populate("user", "firstName email profileImage profilePhoto")
+      .populate("comments.user", "firstName email profileImage profilePhoto");
 
     if (!journal) {
-      return res.status(404).json({
-        error: "Journal not found",
-      });
+      console.warn("⚠️ Journal not found for ID:", id);
+      return res.status(404).json({ error: "Journal not found" });
     }
 
-    // Safely handle likes and comments
     const likes = Array.isArray(journal.likes) ? journal.likes.length : 0;
     const comments = Array.isArray(journal.comments) ? journal.comments.length : 0;
 
-    // Respond with the journal and safe likes/comments counts
-    res.json({
-      ...journal.toObject(),
-      likes,
-      comments,
-    });
+    res.json({ ...journal.toObject(), likes, comments });
   } catch (error) {
+    console.error("🔥 Error retrieving journal:", error.message);
     res.status(500).json({
       error: "Error retrieving journal",
       details: error.message,
@@ -124,12 +124,9 @@ exports.shareJournal = async (req, res) => {
     });
 
     if (!journal) {
-      return res.status(404).json({
-        error: "Journal not found",
-      });
+      return res.status(404).json({ error: "Journal not found" });
     }
 
-    // You can implement more complex sharing logic here
     res.json({
       ...journal.toObject(),
       shareLink: `https://yourapp.com/share/${journal._id}`,
@@ -150,23 +147,25 @@ exports.deleteJournal = async (req, res) => {
     });
 
     if (!journal) {
-      return res.status(404).json({
-        error: "Journal not found",
-      });
+      return res.status(404).json({ error: "Journal not found" });
     }
 
-    // Optional: Delete associated images
-    journal.images.forEach((imagePath) => {
+    // Delete associated images
+    for (const imagePath of journal.images) {
+      const fullPath = path.resolve(__dirname, "..", imagePath);
       try {
-        fs.unlinkSync(imagePath);
+        await fs.promises.unlink(fullPath);
+        console.log("🗑️ Deleted image:", fullPath);
       } catch (err) {
-        console.error("Could not delete image:", imagePath);
+        if (err.code === "ENOENT") {
+          console.warn("⚠️ Image not found, skipping:", fullPath);
+        } else {
+          console.error("❌ Error deleting image:", fullPath, err.message);
+        }
       }
-    });
+    }
 
-    res.json({
-      message: "Journal deleted successfully",
-    });
+    res.json({ message: "Journal deleted successfully" });
   } catch (error) {
     res.status(500).json({
       error: "Error deleting journal",
@@ -177,14 +176,12 @@ exports.deleteJournal = async (req, res) => {
 
 exports.getAllJournals = async (req, res) => {
   try {
-    // Get all journals with user information
     const journals = await Journal.find()
-      .populate('user', 'firstName email profileImage profilePhoto')
+      .populate("user", "firstName email profileImage profilePhoto")
       .sort({ createdAt: -1 })
-      .limit(50); // Limit to prevent performance issues
+      .limit(50);
 
-    // Transform the data to include the full user object
-    const transformedJournals = journals.map(journal => ({
+    const transformedJournals = journals.map((journal) => ({
       _id: journal._id,
       title: journal.title || `Journey to ${journal.location}`,
       location: journal.location,
@@ -194,16 +191,18 @@ exports.getAllJournals = async (req, res) => {
       friendsMentioned: journal.friendsMentioned,
       createdAt: journal.createdAt,
       updatedAt: journal.updatedAt,
-      user: journal.user ? {
-        _id: journal.user._id,
-        firstName: journal.user.firstName,
-        email: journal.user.email,
-        profileImage: journal.user.profileImage,
-        profilePhoto: journal.user.profilePhoto
-      } : null,
+      user: journal.user
+        ? {
+            _id: journal.user._id,
+            firstName: journal.user.firstName,
+            email: journal.user.email,
+            profileImage: journal.user.profileImage,
+            profilePhoto: journal.user.profilePhoto,
+          }
+        : null,
       likes: Array.isArray(journal.likes) ? journal.likes.length : 0,
       comments: Array.isArray(journal.comments) ? journal.comments.length : 0,
-      rating: journal.rating || 4.5
+      rating: journal.rating || 4.5,
     }));
 
     res.json(transformedJournals);
@@ -218,7 +217,7 @@ exports.getAllJournals = async (req, res) => {
 exports.likeJournal = async (req, res) => {
   try {
     const journal = await Journal.findById(req.params.id);
-    if (!journal) return res.status(404).json({ error: 'Journal not found' });
+    if (!journal) return res.status(404).json({ error: "Journal not found" });
     const userId = req.user.id;
     const index = journal.likes.indexOf(userId);
     if (index === -1) {
@@ -229,14 +228,16 @@ exports.likeJournal = async (req, res) => {
     await journal.save();
     res.json({ likes: journal.likes.length });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to like/unlike journal', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to like/unlike journal", details: error.message });
   }
 };
 
 exports.commentJournal = async (req, res) => {
   try {
     const journal = await Journal.findById(req.params.id);
-    if (!journal) return res.status(404).json({ error: 'Journal not found' });
+    if (!journal) return res.status(404).json({ error: "Journal not found" });
     const comment = {
       user: req.user.id,
       text: req.body.text,
@@ -246,6 +247,8 @@ exports.commentJournal = async (req, res) => {
     await journal.save();
     res.json(comment);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add comment', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to add comment", details: error.message });
   }
 };

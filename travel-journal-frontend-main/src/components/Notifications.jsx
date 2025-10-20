@@ -127,13 +127,7 @@ const Notifications = () => {
 
   return (
     <div className="notifications-container">
-      <div className="notifications-header">
-        <button onClick={() => navigate(-1)} className="back-btn">
-          <FaArrowLeft /> Back
-        </button>
-        <h2>Notifications</h2>
-      </div>
-
+      
       <div className="notifications-list">
         {notifications.length === 0 ? (
           <div className="empty-state">

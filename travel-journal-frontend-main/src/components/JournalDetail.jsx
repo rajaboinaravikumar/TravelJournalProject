@@ -176,10 +176,16 @@ function JournalDetail() {
           'Content-Type': 'application/json',
         },
       });
+if (!response.ok) {
+  if (response.status === 404) {
+    setError('Journal not found');
+  } else {
+    const errorData = await response.json();
+    setError(errorData.error || 'Failed to load journal');
+  }
+  return;
+}
 
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} user`);
-      }
 
       setIsFollowing(!isFollowing);
       

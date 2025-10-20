@@ -230,11 +230,12 @@ const Dashboard = () => {
                   </div>
                   <div className="journal-actions">
                     <Link
-                      to={`/journal/${journal._id}`}
-                      className="view-btn"
-                    >
-                      <FaEye /> View
-                    </Link>
+  to={`/journal/${journal._id}`}
+  className="view-btn"
+>
+  <FaEye /> View
+</Link>
+
                     <Link
                       to={`/edit-journal/${journal._id}`}
                       className="edit-btn"
