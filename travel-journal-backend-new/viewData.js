@@ -1,29 +1,24 @@
-// viewData.js - Script to view database data
 const mongoose = require('mongoose');
 const User = require('./src/models/User');
 const Journal = require('./src/models/Journal');
-
-// Connect to database
 const connectDB = async () => {
     try {
         await mongoose.connect('mongodb://localhost:27017/travel-journal', {
             useNewUrlParser: true,
             useUnifiedTopology: true
         });
-        console.log('✅ Connected to MongoDB');
+        console.log('Connected to MongoDB');
     } catch (error) {
-        console.error('❌ MongoDB connection error:', error.message);
+        console.error(' MongoDB connection error:', error.message);
         process.exit(1);
     }
 };
-
-// View all data
 const viewData = async () => {
     try {
-        console.log('\n📊 DATABASE CONTENTS\n');
+        console.log('\n DATABASE CONTENTS\n');
         
         // View Users
-        console.log('👥 USERS:');
+        console.log(' USERS:');
         const users = await User.find({}).select('-password');
         if (users.length === 0) {
             console.log('   No users found');
@@ -36,9 +31,7 @@ const viewData = async () => {
                 console.log('');
             });
         }
-        
-        // View Journals
-        console.log('📝 JOURNALS:');
+        console.log('JOURNALS:');
         const journals = await Journal.find({}).populate('user', 'firstName email');
         if (journals.length === 0) {
             console.log('   No journals found');
@@ -54,19 +47,15 @@ const viewData = async () => {
                 console.log('');
             });
         }
-        
-        // Summary
-        console.log('📈 SUMMARY:');
+        console.log('SUMMARY:');
         console.log(`   Total Users: ${users.length}`);
         console.log(`   Total Journals: ${journals.length}`);
         
     } catch (error) {
-        console.error('❌ Error viewing data:', error.message);
+        console.error(' Error viewing data:', error.message);
     } finally {
         mongoose.connection.close();
-        console.log('\n🔌 Database connection closed');
+        console.log('\n Database connection closed');
     }
 };
-
-// Run the script
 connectDB().then(viewData); 
